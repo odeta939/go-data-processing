@@ -76,7 +76,7 @@ type Product struct {
 }
 
 type Report struct {
-	County       string
+	Country      string
 	TradeBalance decimal.Decimal
 	MostImported Product
 	MostExported Product
@@ -182,7 +182,7 @@ func ReportNorway(records []Record) Report {
 	topExportCode := ""
 	for code, sum := range exportGoods {
 
-		if sum.GreaterThan(topImportVal) {
+		if sum.GreaterThan(topExportVal) {
 			topExportVal.Add(sum)
 			topExportCode = code
 		}
@@ -209,7 +209,7 @@ func ReportNorway(records []Record) Report {
 	}
 
 	report := Report{
-		County:       "Norway",
+		Country:      "Norway",
 		TradeBalance: tradeBalance,
 		MostImported: importTop,
 		MostExported: exportTop,
@@ -254,7 +254,7 @@ func ReportByCountry(records []Record, country string) Report {
 	topExportCode := ""
 	for code, sum := range exportGoods {
 
-		if sum.GreaterThan(topImportVal) {
+		if sum.GreaterThan(topExportVal) {
 			topExportVal.Add(sum)
 			topExportCode = code
 		}
@@ -281,7 +281,7 @@ func ReportByCountry(records []Record, country string) Report {
 	}
 
 	report := Report{
-		County:       country,
+		Country:      country,
 		TradeBalance: tradeBalance,
 		MostImported: importTop,
 		MostExported: exportTop,
@@ -298,7 +298,7 @@ func ReportEU(records []Record) Report {
 	cCodes := CountryCodes(EUCountries)
 
 	for _, r := range records {
-		if contains(cCodes, r.CountryCode) {
+		if !contains(cCodes, r.CountryCode) {
 			continue
 		}
 		if r.Account == "Imports" {
@@ -324,7 +324,7 @@ func ReportEU(records []Record) Report {
 	topExportCode := ""
 	for code, sum := range exportGoods {
 
-		if sum.GreaterThan(topImportVal) {
+		if sum.GreaterThan(topExportVal) {
 			topExportVal.Add(sum)
 			topExportCode = code
 		}
@@ -351,7 +351,7 @@ func ReportEU(records []Record) Report {
 	}
 
 	report := Report{
-		County:       "EU",
+		Country:      "EU",
 		TradeBalance: tradeBalance,
 		MostImported: importTop,
 		MostExported: exportTop,
@@ -409,7 +409,7 @@ func CountryCodes(countries []string) []string {
 		panic(err)
 	}
 
-	cCodes := make([]string, len(countries))
+	cCodes := []string{}
 	for _, row := range r[1:] {
 		for _, c := range countries {
 			if row[1] == c {
@@ -450,7 +450,7 @@ func ReportToCSV(reports []Report, filename string) error {
 
 	for _, r := range reports {
 		row := []string{
-			r.County,
+			r.Country,
 			r.TradeBalance.StringFixed(2),
 			r.MostImported.Name,
 			r.MostImported.Value.StringFixed(2),
