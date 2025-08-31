@@ -76,6 +76,7 @@ type Product struct {
 }
 
 type Report struct {
+	County       string
 	TradeBalance decimal.Decimal
 	MostImported Product
 	MostExported Product
@@ -126,8 +127,15 @@ func main() {
 
 		records = append(records, record)
 	}
-	reportNorway := ReportNorway(records)
-	fmt.Println(reportNorway)
+	//reportNorway := ReportNorway(records)
+	//reportEU := ReportEU(records)
+	reports := make([]Report, 0)
+	for _, c := range EUCountries {
+		r := ReportByCountry(records, c)
+		reports = append(reports, r)
+	}
+
+	fmt.Println(reports)
 }
 
 func ReportNorway(records []Record) Report {
@@ -202,16 +210,87 @@ func ReportNorway(records []Record) Report {
 	}
 	return report
 }
+
+func ReportByCountry(records []Record, country string) Report {
+	importTotal := decimal.NewFromInt(0)
+	exportTotal := decimal.NewFromInt(0)
+	importGoods := make(map[string]decimal.Decimal)
+	exportGoods := make(map[string]decimal.Decimal)
+
+	cCode, err := CountryCode(country)
+	if err != nil {
+		fmt.Println("failed getting country code", err)
+	}
+	for _, r := range records {
+		if r.CountryCode != cCode {
+			continue
+		}
+		if r.Account == "Imports" {
+			importTotal = importTotal.Add(r.Value)
+			importGoods[r.Code] = importGoods[r.Code].Add(r.Value)
+		}
+		if r.Account == "Exports" {
+			exportTotal = exportTotal.Add(r.Value)
+			exportGoods[r.Code] = exportGoods[r.Code].Add(r.Value)
+		}
+	}
+
+	topImportVal := decimal.NewFromInt(0)
+	topImportCode := ""
+	for code, sum := range importGoods {
+		if sum.GreaterThan(topImportVal) {
+			topImportVal = sum
+			topImportCode = code
+		}
+	}
+
+	topExportVal := decimal.NewFromInt(0)
+	topExportCode := ""
+	for code, sum := range exportGoods {
+
+		if sum.GreaterThan(topImportVal) {
+			topExportVal.Add(sum)
+			topExportCode = code
+		}
+	}
+
+	tradeBalance := exportTotal.Sub(importTotal)
+	name, err := ProductName(topImportCode)
+	if err != nil {
+		fmt.Println("failed getting product name", name, err)
+		panic("failed getting product name, ")
+	}
+	importTop := Product{
+		Name:  name,
+		Value: topImportVal,
+	}
+
+	name, err = ProductName(topExportCode)
+	if err != nil {
+		fmt.Println("failed getting product name", err)
+	}
+	exportTop := Product{
+		Name:  name,
+		Value: topImportVal,
+	}
+
+	report := Report{
+		County:       country,
+		TradeBalance: tradeBalance,
+		MostImported: importTop,
+		MostExported: exportTop,
+	}
+	return report
+}
+
 func ReportEU(records []Record) Report {
 	importTotal := decimal.NewFromInt(0)
 	exportTotal := decimal.NewFromInt(0)
 	importGoods := make(map[string]decimal.Decimal)
 	exportGoods := make(map[string]decimal.Decimal)
 
-	cCodes := []string{""} // TODO make a list of EU countries
-	// if err != nil {
-	// 	fmt.Println("failed getting country code", err)
-	// }
+	cCodes := CountryCodes(EUCountries)
+
 	for _, r := range records {
 		if contains(cCodes, r.CountryCode) {
 			continue
@@ -304,8 +383,6 @@ func CountryCode(country string) (string, error) {
 	r, err := reader.ReadAll()
 
 	for _, row := range r[1:] {
-		//-----------------//
-		fmt.Println(row[1])
 		if row[1] == country {
 			return row[0], nil
 		}
@@ -313,6 +390,31 @@ func CountryCode(country string) (string, error) {
 	e := fmt.Errorf("country specified not found: %s", country)
 	return "", e
 }
+
+func CountryCodes(countries []string) []string {
+	file, err := os.Open(CountryClassification)
+	if err != nil {
+		panic(err)
+	}
+
+	reader := csv.NewReader(file)
+
+	r, err := reader.ReadAll()
+	if err != nil {
+		panic(err)
+	}
+
+	cCodes := make([]string, len(countries))
+	for _, row := range r[1:] {
+		for _, c := range countries {
+			if row[1] == c {
+				cCodes = append(cCodes, row[0])
+			}
+		}
+	}
+	return cCodes
+}
+
 func contains(slice []string, item string) bool {
 	for _, v := range slice {
 		if v == item {
