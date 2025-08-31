@@ -14,7 +14,7 @@ var EUCountries = []string{
 	"Bulgaria",
 	"Croatia",
 	"Cyprus",
-	"Czech Republic",
+	"Czechia",
 	"Denmark",
 	"Estonia",
 	"Finland",
@@ -127,13 +127,20 @@ func main() {
 
 		records = append(records, record)
 	}
-	//reportNorway := ReportNorway(records)
-	//reportEU := ReportEU(records)
+	reportNorway := ReportNorway(records)
+	reportEU := ReportEU(records)
+
 	reports := make([]Report, 0)
+
 	for _, c := range EUCountries {
 		r := ReportByCountry(records, c)
 		reports = append(reports, r)
 	}
+	ReportToCSV(reports, "EU_reports.csv")
+	reports = []Report{reportEU}
+	ReportToCSV(reports, "EU_report_total.csv")
+	reports = []Report{reportNorway}
+	ReportToCSV(reports, "Norway_report.csv")
 
 	fmt.Println(reports)
 }
@@ -182,8 +189,6 @@ func ReportNorway(records []Record) Report {
 	}
 
 	tradeBalance := exportTotal.Sub(importTotal)
-	fmt.Println("export total: ", exportTotal)
-	fmt.Println("import total: ", importTotal)
 	name, err := ProductName(topImportCode)
 	if err != nil {
 		fmt.Println("failed getting product name", name, err)
@@ -204,6 +209,7 @@ func ReportNorway(records []Record) Report {
 	}
 
 	report := Report{
+		County:       "Norway",
 		TradeBalance: tradeBalance,
 		MostImported: importTop,
 		MostExported: exportTop,
@@ -325,8 +331,6 @@ func ReportEU(records []Record) Report {
 	}
 
 	tradeBalance := exportTotal.Sub(importTotal)
-	fmt.Println("export total: ", exportTotal)
-	fmt.Println("import total: ", importTotal)
 	name, err := ProductName(topImportCode)
 	if err != nil {
 		fmt.Println("failed getting product name", name, err)
@@ -347,6 +351,7 @@ func ReportEU(records []Record) Report {
 	}
 
 	report := Report{
+		County:       "EU",
 		TradeBalance: tradeBalance,
 		MostImported: importTop,
 		MostExported: exportTop,
@@ -422,4 +427,38 @@ func contains(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+func ReportToCSV(reports []Report, filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	writer.Write([]string{
+		"country",
+		"trade_balance",
+		"most_imported_product",
+		"import_value",
+		"most_exported_product",
+		"exported_value",
+	})
+
+	for _, r := range reports {
+		row := []string{
+			r.County,
+			r.TradeBalance.StringFixed(2),
+			r.MostImported.Name,
+			r.MostImported.Value.StringFixed(2),
+			r.MostExported.Name,
+			r.MostExported.Value.StringFixed(2),
+		}
+		writer.Write(row)
+	}
+
+	return nil
 }
