@@ -19,9 +19,7 @@ Krav:
 
 ## Komentar til oppgaven
 Ting som kan forbedres: 
-- error handling. 
-    akkurat nå error handling er ikke ferdig
-    - basert på type applikasjon, typisk error handling burde implementeres
-- Prosjekt struktur
-    strukturere prosjektet basert på hvilken type applikasjon det er ønskelig
-- noen funskjoner kunne gjenbrukes i stedet for lage en kopi av det for forskjelige cases
+- error handling
+- kode lesbarhet
+
+
